@@ -16,7 +16,7 @@ int total;
 
 void parse_data()
 {
-  int c, j;
+	int c, j;
 	char *ptr = arr;
 
 	while((c = fread(ptr, 1, MAX_CHUNK_SIZE, stdin)) > 0) ptr += c;
@@ -49,39 +49,42 @@ inline int extract_string(char *buff)
 	return buff - beginning;
 }
 
-#define SUPERINT long long int
+#define SUPERINT int
+#define ULTRA_MAX(x, y) (x - ((x - y) & ((x - y) >> (sizeof(int) * 8 - 1))))
+#define ULTRA_ABS(x, y) (x > y ? x : y)
+
+pair<SUPERINT, int> girls[100000];
+int N, T;
+int sml, big;
+
+unsigned long long best;
 
 int main() {
 	parse_data();
 
-	int test_cases = extract_int();
-	while(test_cases--){
-		int N = extract_int();
+	T = extract_int();
+	while(T--){
+		N = extract_int();
 
-		vector<pair<SUPERINT, int> > girls(N);
 		for(int i = 0; i < N; i++){
-			SUPERINT height = extract_int();
-			girls[i] = make_pair<SUPERINT, int>(height, i+1);
-		}
-		
-		// sort by height.
-		sort(girls.begin(), girls.end());
-
-		priority_queue<SUPERINT> less;
-		priority_queue<SUPERINT, vector<SUPERINT>, greater<SUPERINT> > bigger;
-
-		SUPERINT best = 0;
-		for(int i = N - 1; i >= 0; i--){
-			if(!less.empty()){
-				best = max(best, abs(less.top()		- girls[i].second) * girls[i].first);
-				best = max(best, abs(bigger.top()	- girls[i].second) * girls[i].first);
-			}
-
-			less.push(girls[i].second);
-			bigger.push(girls[i].second);
+			girls[i].first	= extract_int();
+			girls[i].second = i;
 		}
 
-		printf("%lld\n", best);
+		sort(girls, girls + N);
+		sml = big = girls[N - 1].second;
+		best = 0;
+
+		for(int i = N - 2; i >= 0; i--){
+			best = max(best, 
+							ULTRA_MAX(abs(girls[i].second - sml), abs(girls[i].second - big)) 
+							* (unsigned long long)girls[i].first);
+	
+			sml = min(sml, girls[i].second);
+			big = max(big, girls[i].second);
+		}
+
+		printf("%llu\n", best);
 	}
 	return 0;
 }
