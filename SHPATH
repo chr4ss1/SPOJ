@@ -1,0 +1,215 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <queue>
+#include <algorithm>
+
+using namespace std;
+
+#define MAX_CHUNK_SIZE 65536
+#define IS_WHITESPACE(x) (((x == 13) || (x == 10) || (x == ' ')))
+
+char arr[10000000] = {0};
+char *ptr = arr;
+char *end_ptr;
+int total;
+
+void parse_data()
+{
+	int c, j;
+	char *ptr = arr;
+
+	while((c = fread(ptr, 1, MAX_CHUNK_SIZE, stdin)) > 0) ptr += c;
+
+	end_ptr = ptr;
+	ptr = arr;
+}
+inline void skip_whitespaces(){while(IS_WHITESPACE(*ptr)) ptr++;}
+inline int extract_int()
+{
+	skip_whitespaces();
+
+	char *p;
+	int number = strtol(ptr, &p, 10);
+	number = ptr == p ? -1 : number;
+
+	while(*ptr >= '0' && *ptr <= '9')ptr++;
+	return number;
+}
+
+inline int extract_string(char *buff)
+{
+	skip_whitespaces();
+	while(*ptr == ' ') ptr++;
+
+	char *beginning = buff;
+	while(*ptr != 13 && *ptr != 10 && *ptr != ' ' && ptr < end_ptr) *buff++ = *ptr++;
+
+	*buff = 0;
+	return buff - beginning;
+}
+
+inline unsigned long _hash(unsigned char *str)
+{
+    unsigned long hash = 5381;
+    int c;
+    while (c = *str++) hash = ((hash << 5) + hash) + c; 
+    return hash;
+}
+
+#define MAX_HASH MAX_CITIES + 200
+#define MAX_CITIES 10000
+
+struct hash_map
+{
+	int index;
+	char str[11];
+} HASH_MAP[MAX_HASH];
+
+void hash_string_setval(unsigned char *str, int val)
+{
+	unsigned long id = _hash(str) % MAX_HASH;
+	while(HASH_MAP[id].index != 0){
+		id++;
+		if(id  == MAX_HASH) id = 0;
+	}
+
+	int j = 0;
+	while(*str){
+		HASH_MAP[id].str[j] = *str;
+		j++;
+		str++;
+	}
+
+	HASH_MAP[id].index = val;
+}
+
+int hash_string_getval(unsigned char *str)
+{
+	unsigned long id = _hash(str) % MAX_HASH;
+	while(HASH_MAP[id].index != 0){
+		int j = 0;
+		unsigned char *ptr = str;
+		bool found = true;
+
+		while(*ptr){
+			if(HASH_MAP[id].str[j] != *ptr){
+				found = false;
+				break;
+			}
+
+			j++;
+			ptr++;
+		}
+
+		if(found) 
+			return id;
+
+		id++; 
+		if(id == MAX_HASH) 
+			id = 0;
+	}
+
+	return -1;
+}
+
+
+struct node
+{
+	int city_index;
+	int cur_cost;
+	bool operator < (const node& e) const{return (cur_cost > e.cur_cost);}
+};
+
+struct city
+{
+	int best_cost;
+	bool explored;
+	vector<pair<int, int> > neighbours;
+};
+
+vector<city>	CITIES;
+char			temp_city_second[11];
+char			temp_city[11];
+
+// Returns best path from start->end
+// using dijkstra algorithm. http://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
+int dijkstra(int start, int end)
+{
+	if(start == end) return 0;
+	for(int e = 0; e < CITIES.size(); e++){ 
+		CITIES[e].explored	= false;
+		CITIES[e].best_cost = 0;
+	}
+
+	priority_queue<node> pque;
+	node beg; 
+	beg.city_index	= start;
+	beg.cur_cost	= 0;
+	pque.push(beg);
+
+	while(!pque.empty()){
+		node cur_node = pque.top();
+		pque.pop();
+
+		city &cur_city = CITIES[cur_node.city_index];
+		if(cur_city.explored)						continue;
+		if(cur_city.best_cost != cur_node.cur_cost) continue;
+		if(cur_node.city_index == end)				return cur_city.best_cost;
+
+		for(int n = 0; n < cur_city.neighbours.size(); n++){
+			int neighbour_index		= cur_city.neighbours[n].first;
+			int cost_to_travel		= cur_city.neighbours[n].second;
+
+			city &neighbour_city	= CITIES[neighbour_index];
+			if(neighbour_city.explored) continue;
+			if(neighbour_city.best_cost == 0 || cur_city.best_cost + cost_to_travel < neighbour_city.best_cost){
+				neighbour_city.best_cost = cur_city.best_cost + cost_to_travel;
+
+				beg.city_index	= neighbour_index;
+				beg.cur_cost	=  neighbour_city.best_cost;
+				pque.push(beg);
+			}
+		}
+		cur_city.explored = true;
+	}
+
+	// no path found, indicate it with -1.
+	return -1;
+}
+
+int main() {
+	parse_data();
+
+	int test_cases = extract_int();
+	while(test_cases--){
+		memset(HASH_MAP, 0, sizeof(hash_map) * MAX_HASH);
+		int city_count = extract_int();
+
+		CITIES.resize(city_count + 1);
+		for(int i = 1; i <= city_count; i++){
+			extract_string(temp_city);
+			hash_string_setval((unsigned char *)temp_city, i);
+
+			int neighbours_count = extract_int();
+			CITIES[i].neighbours.resize(neighbours_count);
+
+			for(int j = 0; j < neighbours_count; j++){
+				int city_index	= extract_int();
+				int cost		= extract_int();
+
+				CITIES[i].neighbours[j].first	= city_index;
+				CITIES[i].neighbours[j].second	= cost; 
+			}
+		}
+
+		for(int q = extract_int(); q; q--){
+			extract_string(temp_city);
+			extract_string(temp_city_second);
+			printf("%d\n", dijkstra(
+				HASH_MAP[hash_string_getval((unsigned char*)temp_city)].index, 
+				HASH_MAP[hash_string_getval((unsigned char*)temp_city_second)].index));
+		}
+	}
+	return 0;
+}
