@@ -128,7 +128,8 @@ struct city
 	vector<pair<int, int> > neighbours;
 };
 
-vector<city>	CITIES;
+int				city_count;
+city			CITIES[MAX_CITIES + 1];
 char			temp_city_second[11];
 char			temp_city[11];
 
@@ -137,7 +138,7 @@ char			temp_city[11];
 int dijkstra(int start, int end)
 {
 	if(start == end) return 0;
-	for(int e = 0; e < CITIES.size(); e++){ 
+	for(int e = 0; e <= city_count; e++){ 
 		CITIES[e].explored	= false;
 		CITIES[e].best_cost = 0;
 	}
@@ -184,9 +185,8 @@ int main() {
 	int test_cases = extract_int();
 	while(test_cases--){
 		memset(HASH_MAP, 0, sizeof(hash_map) * MAX_HASH);
-		int city_count = extract_int();
+		city_count = extract_int();
 
-		CITIES.resize(city_count + 1);
 		for(int i = 1; i <= city_count; i++){
 			extract_string(temp_city);
 			hash_string_setval((unsigned char *)temp_city, i);
